@@ -2,20 +2,21 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"os"
 )
 
 func main() {
+	var startSymbol = []rune("full-name")
 	file, err := os.ReadFile("./b.bnf")
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 	b := bytes.Split(file, []byte("\n"))
-	grammar := NewGrammar("full-name")
+	grammar := NewGrammar(startSymbol)
 	for _, line := range b {
-		scanner := NewScanner(line)
+
+		scanner := NewScanner(bytes.Runes(line))
 		tokens, err := scanner.Scan()
 		if err != nil {
 			log.Fatalf("Error: %v", err)
@@ -23,7 +24,7 @@ func main() {
 		if tokens != nil {
 			head := tokens[0]
 			body := tokens[2:]
-			parser := NewParser(body)
+			parser := NewParser(body, bytes.Runes(line))
 			expr, err := parser.Parse()
 			if err != nil {
 				log.Fatalf("Error: %v", err)
@@ -35,7 +36,6 @@ func main() {
 			})
 		}
 	}
-	const startSymbol = "full-name"
 	startExpr, err := grammar.GetExpressionFromGrammar(startSymbol)
 	if err != nil {
 		log.Fatal(err)
@@ -44,5 +44,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(result)
+	log.Println(string(result))
 }

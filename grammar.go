@@ -6,7 +6,7 @@ import (
 )
 
 type Rule struct {
-	Head string
+	Head []rune
 	Body Expr
 }
 
@@ -14,58 +14,57 @@ type Rules map[string]Expr
 
 type Grammar struct {
 	rules       Rules
-	startSymbol string
+	startSymbol []rune
 }
 
-func NewGrammar(startSymbol string) Grammar {
+func NewGrammar(startSymbol []rune) Grammar {
 	return Grammar{
 		rules:       make(Rules),
 		startSymbol: startSymbol,
 	}
 }
 
-func (g *Grammar) Generate(expr Expr) (string, error) {
+func (g *Grammar) Generate(expr Expr) ([]rune, error) {
 	switch expr := expr.(type) {
 	case EqualExpr:
 		chosenAlternative := rand.Intn(len(expr))
-		sequece := expr[chosenAlternative]
-		return g.Generate(sequece)
+		sequence := expr[chosenAlternative]
+		return g.Generate(sequence)
 	case SequenceExpr:
-		var res string
+		var sequenceString []rune
 		for i := 0; i < len(expr); i++ {
 			r, err := g.Generate(expr[i])
 			if err != nil {
-				return "", err
+				return nil, err
 			}
-			res += r
+			sequenceString = append(sequenceString, r...)
 		}
-		return res, nil
+		return sequenceString, nil
 	case NonTerminalExpr:
 		exp, err := g.GetExpressionFromGrammar(expr.Text)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		str, err := g.Generate(exp)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		return str, nil
 
 	case StringExpr:
 		return expr.Text, nil
 	default:
-		return "", fmt.Errorf("unknown Expression")
+		return nil, fmt.Errorf("unknown Expression")
 	}
 }
 
 func (g *Grammar) AddRule(rule Rule) {
-	g.rules[rule.Head] = rule.Body
+	g.rules[string(rule.Head)] = rule.Body
 }
-func (g *Grammar) GetExpressionFromGrammar(head string) (Expr, error) {
-
-	expr, ok := g.rules[head]
+func (g *Grammar) GetExpressionFromGrammar(head []rune) (Expr, error) {
+	expr, ok := g.rules[string(head)]
 	if !ok {
-		return nil, fmt.Errorf("unknown symbol: %s", head)
+		return nil, fmt.Errorf("unknown symbol: %s", string(head))
 	}
 	return expr, nil
 }

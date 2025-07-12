@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -9,6 +8,7 @@ type Parser struct {
 	pos    int
 	tokens []Token
 	expr   Expr
+	line   []rune
 }
 
 type Expr interface{}
@@ -18,17 +18,19 @@ type SequenceExpr []Expr
 type EqualExpr []Expr
 
 type NonTerminalExpr struct {
-	Text      string
+	Text      []rune
 	TokenType TokenType
+	Loc       int
 }
 
 type StringExpr struct {
-	Text      string
+	Text      []rune
 	TokenType TokenType
+	Loc       int
 }
 
-func NewParser(tokens []Token) Parser {
-	return Parser{tokens: tokens}
+func NewParser(tokens []Token, line []rune) Parser {
+	return Parser{tokens: tokens, line: line}
 }
 
 func (p *Parser) ParseSequenceExpr() SequenceExpr {
@@ -61,7 +63,7 @@ func (p *Parser) ParseSequenceExpr() SequenceExpr {
 func (p *Parser) ParseEqualExpr() error {
 	sequenceExpr := p.ParseSequenceExpr()
 	if len(sequenceExpr) == 0 {
-		return fmt.Errorf("sequence can't be zero length")
+		return fmt.Errorf("syntax error: %s", string(p.line))
 	}
 
 	equalExpr, isEqualExpr := p.expr.(EqualExpr)
@@ -109,7 +111,11 @@ func (p *Parser) Expect(expected TokenType) error {
 	if token.TokenType == expected {
 		return nil
 	}
-	return errors.New("expected different token ") //!FIX
+	tokenStr, err := TokenToString(expected)
+	if err != nil {
+		return err
+	}
+	return fmt.Errorf("expected token: %s, got: %s", tokenStr, string(token.Text))
 }
 
 func (p *Parser) ParsePrimaryExpr() Expr {
@@ -134,5 +140,4 @@ func (p *Parser) Parse() (Expr, error) {
 		return nil, err
 	}
 	return p.expr, nil
-	// sequece := p.ParseSequence()
 }

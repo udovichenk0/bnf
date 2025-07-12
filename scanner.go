@@ -3,18 +3,25 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 )
 
 type Scanner struct {
 	current int
 	start   int
-	line    []byte
+	line    []rune
 	tokens  []Token
 }
 
+const (
+	choiceSym = "|"
+	equalSym  = "::="
+)
+
 type Token struct {
-	Text      string
+	Text      []rune
 	TokenType TokenType
+	Loc       int
 }
 
 type TokenType int
@@ -26,24 +33,35 @@ const (
 	ChoiceSym
 )
 
-func NewScanner(line []byte) Scanner {
+func NewScanner(line []rune) Scanner {
 	return Scanner{line: line}
 }
 
 var LiteralTokens = map[string]TokenType{
-	"|":   ChoiceSym,
-	"::=": EqualSym,
+	choiceSym: ChoiceSym,
+	equalSym:  EqualSym,
+}
+
+func TokenToString(tokenType TokenType) (string, error) {
+	switch tokenType {
+	case ChoiceSym:
+		return choiceSym, nil
+	case EqualSym:
+		return equalSym, nil
+	default:
+		return "", fmt.Errorf("unknown tokenType: %d", tokenType)
+	}
 }
 
 func (s Scanner) Scan() ([]Token, error) {
 	s.current = 0
 	s.start = 0
 	s.tokens = nil
-
 	if len(s.line) == 0 {
 		return nil, nil
 	}
-	for !s.IsEnd() {
+
+	for !s.IsAtEnd() {
 		c := s.Peek()
 		switch c {
 		case '<':
@@ -53,14 +71,15 @@ func (s Scanner) Scan() ([]Token, error) {
 			s.GetStringToken()
 			continue
 		case ' ':
-			s.GetChar()
+			s.Next()
 			continue
 		}
 		if s.IsSymbol(c) {
 			s.GetLiteralToken()
 			continue
 		} else {
-			return nil, fmt.Errorf("unknown symbol: %s", string(c))
+			l := fmt.Sprintf("unknown symbol: %s in line:", string(c))
+			return nil, fmt.Errorf("%s \n%s\n%s^", l, string(s.line), strings.Repeat("-", s.current))
 		}
 	}
 	return s.tokens, nil
@@ -69,17 +88,18 @@ func (s Scanner) Scan() ([]Token, error) {
 func (s *Scanner) GetVariableToken() {
 	s.current++
 	s.start = s.current
-	for !s.IsEnd() && !s.Match(('>')) {
-		s.GetChar()
+	for !s.IsAtEnd() && !s.Match(('>')) {
+		s.Next()
 	}
-	if s.IsEnd() {
-		log.Fatalf("Error: Expected '%c' symbol at the end of the line: '%s'", '>', s.line)
+	if s.IsAtEnd() {
+		log.Fatalf("Error: Expected '%c' symbol at the end of the line: '%s'", '>', string(s.line))
 		return
 	}
 
 	token := Token{
-		Text:      string(s.line[s.start:s.current]),
+		Text:      s.line[s.start:s.current],
 		TokenType: NonTerminalSym,
+		Loc:       s.start,
 	}
 	s.current++
 	s.tokens = append(s.tokens, token)
@@ -88,17 +108,18 @@ func (s *Scanner) GetVariableToken() {
 func (s *Scanner) GetStringToken() {
 	s.current++
 	s.start = s.current
-	for !s.IsEnd() && !s.Match(('"')) {
-		s.GetChar()
+	for !s.IsAtEnd() && !s.Match(('"')) {
+		s.Next()
 	}
-	if s.IsEnd() {
-		log.Fatalf("Error: Expected '%c' symbol at the end of the line: '%s'", '"', s.line)
+	if s.IsAtEnd() {
+		log.Fatalf("Error: Expected '%c' symbol at the end of the line: '%s'", '"', string(s.line))
 		return
 	}
 
 	token := Token{
-		Text:      string(s.line[s.start:s.current]),
+		Text:      s.line[s.start:s.current],
 		TokenType: StringSym,
+		Loc:       s.start,
 	}
 	s.current++
 	s.tokens = append(s.tokens, token)
@@ -106,30 +127,31 @@ func (s *Scanner) GetStringToken() {
 
 func (s *Scanner) GetLiteralToken() {
 	s.start = s.current
-	var lit []byte
-	for !s.IsEnd() && s.IsSymbol(s.Peek()) {
-		lit = append(lit, s.GetChar())
+	var lit []rune
+	for !s.IsAtEnd() && s.IsSymbol(s.Peek()) {
+		lit = append(lit, s.Next())
 	}
 
 	e, ok := LiteralTokens[string(lit)]
 	if !ok {
-		log.Fatalf("Error: Unknown literal token '%s'.", lit)
+		log.Fatalf("unknown literal token '%s' in line: \n%s\n%s^", string(lit), string(s.line), strings.Repeat("-", s.start))
 		return
 	}
 	s.tokens = append(s.tokens, Token{
-		Text:      string(lit),
+		Text:      lit,
 		TokenType: e,
+		Loc:       s.start,
 	})
 }
 
-func (s *Scanner) Peek() byte {
-	if s.IsEnd() {
-		return 0
+func (s *Scanner) Peek() rune {
+	if s.IsAtEnd() {
+		return '\x00'
 	}
 	return s.line[s.current]
 }
 
-func (s *Scanner) IsSymbol(b byte) bool {
+func (s *Scanner) IsSymbol(b rune) bool {
 	var isSymbol bool
 	switch b {
 	case '|', ':', '=', '<', '>', '-', '_':
@@ -138,15 +160,18 @@ func (s *Scanner) IsSymbol(b byte) bool {
 	return isSymbol
 }
 
-func (s *Scanner) IsEnd() bool {
+func (s *Scanner) IsAtEnd() bool {
 	return s.current >= len(s.line) || s.line[s.current] == '\r' || s.line[s.current] == '\n'
 }
 
-func (s *Scanner) Match(b byte) bool {
+func (s *Scanner) Match(b rune) bool {
 	return s.line[s.current] == b
 }
 
-func (s *Scanner) GetChar() byte {
+func (s *Scanner) Next() rune {
+	if s.IsAtEnd() {
+		return '\x00'
+	}
 	s.current++
 	return s.line[s.current-1]
 }
