@@ -1,0 +1,4 @@
+<full-name> ::= <name-part> " " <surname>"." | <name-part> " " <random>"."
+<name-part> ::= "Denis" | "Pablo"
+<random> ::= "RandomString"
+<surname> ::= "BBBB" | "Surname"
