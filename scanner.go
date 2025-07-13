@@ -14,8 +14,10 @@ type Scanner struct {
 }
 
 const (
-	choiceSym = "|"
-	equalSym  = "::="
+	choiceSym  = "|"
+	equalSym   = "::="
+	openParen  = "("
+	closeParen = ")"
 )
 
 type Token struct {
@@ -28,9 +30,11 @@ type TokenType int
 
 const (
 	NonTerminalSym TokenType = iota + 1
-	StringSym
-	EqualSym
-	ChoiceSym
+	String
+	Equal
+	Choice
+	OpenParen
+	CloseParen
 )
 
 func NewScanner(line []rune) Scanner {
@@ -38,16 +42,20 @@ func NewScanner(line []rune) Scanner {
 }
 
 var LiteralTokens = map[string]TokenType{
-	choiceSym: ChoiceSym,
-	equalSym:  EqualSym,
+	choiceSym:  Choice,
+	equalSym:   Equal,
+	openParen:  OpenParen,
+	closeParen: CloseParen,
 }
 
 func TokenToString(tokenType TokenType) (string, error) {
 	switch tokenType {
-	case ChoiceSym:
+	case Choice:
 		return choiceSym, nil
-	case EqualSym:
+	case Equal:
 		return equalSym, nil
+	case CloseParen:
+		return closeParen, nil
 	default:
 		return "", fmt.Errorf("unknown tokenType: %d", tokenType)
 	}
@@ -118,7 +126,7 @@ func (s *Scanner) GetStringToken() {
 
 	token := Token{
 		Text:      s.line[s.start:s.current],
-		TokenType: StringSym,
+		TokenType: String,
 		Loc:       s.start,
 	}
 	s.current++
@@ -154,7 +162,7 @@ func (s *Scanner) Peek() rune {
 func (s *Scanner) IsSymbol(b rune) bool {
 	var isSymbol bool
 	switch b {
-	case '|', ':', '=', '<', '>', '-', '_':
+	case '|', ':', '=', '(', ')':
 		isSymbol = true
 	}
 	return isSymbol

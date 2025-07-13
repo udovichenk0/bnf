@@ -24,7 +24,7 @@ func NewGrammar() Grammar {
 
 func (g *Grammar) Generate(expr Expr) ([]rune, error) {
 	switch expr := expr.(type) {
-	case EqualExpr:
+	case ChoiceExpr:
 		chosenAlternative := rand.Intn(len(expr))
 		sequence := expr[chosenAlternative]
 		return g.Generate(sequence)
@@ -48,7 +48,6 @@ func (g *Grammar) Generate(expr Expr) ([]rune, error) {
 			return nil, err
 		}
 		return str, nil
-
 	case StringExpr:
 		return expr.Text, nil
 	default:

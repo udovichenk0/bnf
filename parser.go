@@ -7,7 +7,6 @@ import (
 type Parser struct {
 	pos    int
 	tokens []Token
-	expr   Expr
 	line   []rune
 }
 
@@ -15,7 +14,7 @@ type Expr interface{}
 
 type SequenceExpr []Expr
 
-type EqualExpr []Expr
+type ChoiceExpr []Expr
 
 type NonTerminalExpr struct {
 	Text      []rune
@@ -33,62 +32,86 @@ func NewParser(tokens []Token, line []rune) Parser {
 	return Parser{tokens: tokens, line: line}
 }
 
-func (p *Parser) ParseSequenceExpr() SequenceExpr {
-	primary := p.ParsePrimaryExpr()
-	if primary == nil {
-		return SequenceExpr{}
+func (p *Parser) ParseSequenceExpr() (SequenceExpr, error) {
+	primary, err := p.ParsePrimaryExpr()
+
+	if err != nil {
+		return nil, err
 	}
 
 	sequence := SequenceExpr{
 		primary,
 	}
-	choiceBar := p.Peek()
-	if choiceBar.TokenType == ChoiceSym {
-		return sequence
-	}
-	for primary != nil && !p.IsAtEnd() {
-		choiceBar := p.Peek()
-		if choiceBar.TokenType != ChoiceSym {
-			primary = p.ParsePrimaryExpr()
-			if primary != nil {
-				sequence = append(sequence, primary)
-			}
-		} else {
-			break
+
+	for !p.IsAtEnd() && p.CanStartExpr() {
+		primary, err := p.ParsePrimaryExpr()
+		if err != nil {
+			return nil, err
 		}
+		sequence = append(sequence, primary)
 	}
-	return sequence
+	return sequence, nil
 }
 
-func (p *Parser) ParseEqualExpr() error {
-	sequenceExpr := p.ParseSequenceExpr()
+func (p *Parser) ParseChoiceExpr() (Expr, error) {
+	sequenceExpr, err := p.ParseSequenceExpr()
+	if err != nil {
+		return nil, err
+	}
+
 	if len(sequenceExpr) == 0 {
-		return fmt.Errorf("syntax error: %s", string(p.line))
+		return nil, nil
 	}
 
-	equalExpr, isEqualExpr := p.expr.(EqualExpr)
-	if isEqualExpr {
-		p.expr = append(equalExpr, sequenceExpr)
-	}
+	var expr ChoiceExpr
+	expr = append(expr, sequenceExpr)
 
-	if !p.IsAtEnd() {
-		err := p.Expect(ChoiceSym)
+	for !p.IsAtEnd() && p.Peek().TokenType == Choice {
+		if err := p.Expect(Choice); err != nil {
+			return nil, err
+		}
+		sequenceExpr, err := p.ParseSequenceExpr()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if !isEqualExpr {
-			p.expr = EqualExpr{sequenceExpr}
-		}
-		err = p.ParseEqualExpr()
-		if err != nil {
-			return err
-		}
-	} else {
-		if !isEqualExpr {
-			p.expr = sequenceExpr
-		}
+		expr = append(expr, sequenceExpr)
 	}
-	return nil
+	return expr, nil
+}
+
+func (p *Parser) ParsePrimaryExpr() (Expr, error) {
+	token := p.Peek()
+	switch token.TokenType {
+	case NonTerminalSym:
+		p.Next()
+		return NonTerminalExpr(token), nil
+	case String:
+		p.Next()
+		return StringExpr(token), nil
+	case OpenParen:
+		p.Next()
+		expr, _ := p.Parse()
+		err := p.Expect(CloseParen)
+		if err != nil {
+			return nil, err
+		}
+		return expr, nil
+	default:
+		return nil, fmt.Errorf("expect expression")
+	}
+}
+
+func (p *Parser) CanStartExpr() bool {
+	switch p.Peek().TokenType {
+	case String, OpenParen, NonTerminalSym:
+		return true
+	default:
+		return false
+	}
+}
+
+func (p *Parser) IsAtEnd() bool {
+	return p.pos >= len(p.tokens)
 }
 
 func (p *Parser) Peek() Token {
@@ -107,8 +130,9 @@ func (p *Parser) Next() Token {
 }
 
 func (p *Parser) Expect(expected TokenType) error {
-	token := p.Next()
+	token := p.Peek()
 	if token.TokenType == expected {
+		p.Next()
 		return nil
 	}
 	tokenStr, err := TokenToString(expected)
@@ -118,26 +142,10 @@ func (p *Parser) Expect(expected TokenType) error {
 	return fmt.Errorf("expected token: %s, got: %s", tokenStr, string(token.Text))
 }
 
-func (p *Parser) ParsePrimaryExpr() Expr {
-	token := p.Next()
-	switch token.TokenType {
-	case NonTerminalSym:
-		return NonTerminalExpr(token)
-	case StringSym:
-		return StringExpr(token)
-	default:
-		return nil
-	}
-}
-
-func (p *Parser) IsAtEnd() bool {
-	return p.pos >= len(p.tokens)
-}
-
 func (p *Parser) Parse() (Expr, error) {
-	err := p.ParseEqualExpr()
+	expr, err := p.ParseChoiceExpr()
 	if err != nil {
 		return nil, err
 	}
-	return p.expr, nil
+	return expr, nil
 }

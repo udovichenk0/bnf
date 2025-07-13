@@ -92,7 +92,3 @@ func main() {
 	}
 	log.Println(string(result))
 }
-
-func IsFlag(val string) {
-
-}
