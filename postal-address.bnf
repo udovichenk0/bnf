@@ -1,0 +1,17 @@
+<address> ::= <street-address> ", " <city> ", " <postal-code> ", " <country>
+
+<street-address> ::= <number> " " <street-name> " " <street-type>
+
+<street-name> ::= "Main" | "Oak" | "Maple" | "Elm" | "Sunset"
+
+<street-type> ::= "St." | "Ave." | "Blvd." | "Rd." | "Ln."
+
+<city> ::= "New York" | "San Francisco" | "London" | "Kyiv" | "Berlin"
+
+<postal-code> ::= <digit><digit><digit><digit><digit>
+
+<country> ::= "USA" | "UK" | "Ukraine" | "Germany" | "Canada"
+
+<number> ::= <digit> | <digit><digit> | <digit><digit><digit>
+
+<digit> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"

@@ -13,14 +13,12 @@ type Rule struct {
 type Rules map[string]Expr
 
 type Grammar struct {
-	rules       Rules
-	startSymbol []rune
+	rules Rules
 }
 
-func NewGrammar(startSymbol []rune) Grammar {
+func NewGrammar() Grammar {
 	return Grammar{
-		rules:       make(Rules),
-		startSymbol: startSymbol,
+		rules: make(Rules),
 	}
 }
 
@@ -41,7 +39,7 @@ func (g *Grammar) Generate(expr Expr) ([]rune, error) {
 		}
 		return sequenceString, nil
 	case NonTerminalExpr:
-		exp, err := g.GetExpressionFromGrammar(expr.Text)
+		exp, err := g.GetExpressionFromGrammar(string(expr.Text))
 		if err != nil {
 			return nil, err
 		}
@@ -61,10 +59,10 @@ func (g *Grammar) Generate(expr Expr) ([]rune, error) {
 func (g *Grammar) AddRule(rule Rule) {
 	g.rules[string(rule.Head)] = rule.Body
 }
-func (g *Grammar) GetExpressionFromGrammar(head []rune) (Expr, error) {
-	expr, ok := g.rules[string(head)]
+func (g *Grammar) GetExpressionFromGrammar(head string) (Expr, error) {
+	expr, ok := g.rules[head]
 	if !ok {
-		return nil, fmt.Errorf("unknown symbol: %s", string(head))
+		return nil, fmt.Errorf("unknown symbol: %s", head)
 	}
 	return expr, nil
 }
