@@ -28,6 +28,12 @@ type StringExpr struct {
 	Loc       int
 }
 
+type RepetitionExpr struct {
+	Min  int
+	Max  int
+	expr Expr
+}
+
 func NewParser(tokens []Token, line []rune) Parser {
 	return Parser{tokens: tokens, line: line}
 }
@@ -96,6 +102,18 @@ func (p *Parser) ParsePrimaryExpr() (Expr, error) {
 			return nil, err
 		}
 		return expr, nil
+	case OpenCurlyBrace:
+		p.Next()
+		expr, _ := p.Parse()
+		err := p.Expect(CloseCurlyBrace)
+		if err != nil {
+			return nil, err
+		}
+		return RepetitionExpr{
+			Min:  0,
+			Max:  10,
+			expr: expr,
+		}, nil
 	default:
 		return nil, fmt.Errorf("expect expression")
 	}
@@ -103,7 +121,7 @@ func (p *Parser) ParsePrimaryExpr() (Expr, error) {
 
 func (p *Parser) CanStartExpr() bool {
 	switch p.Peek().TokenType {
-	case String, OpenParen, NonTerminalSym:
+	case String, OpenParen, NonTerminalSym, OpenCurlyBrace:
 		return true
 	default:
 		return false

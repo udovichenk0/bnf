@@ -28,6 +28,8 @@ const (
 	Choice
 	OpenParen
 	CloseParen
+	OpenCurlyBrace
+	CloseCurlyBrace
 )
 
 func NewScanner(line []rune) Scanner {
@@ -42,6 +44,8 @@ var LiteralTokens = map[string]TokenType{
 	"=":   Equal,
 	"(":   OpenParen,
 	")":   CloseParen,
+	"{":   OpenCurlyBrace,
+	"}":   CloseCurlyBrace,
 }
 
 func TokenToString(tokenType TokenType) (string, error) {
@@ -152,12 +156,11 @@ func (s *Scanner) Peek() rune {
 }
 
 func (s *Scanner) IsSymbol(b rune) bool {
-	var isSymbol bool
 	switch b {
-	case '|', '/', ':', '=', '(', ')':
-		isSymbol = true
+	case '|', '/', ':', '=', '(', ')', '{', '}':
+		return true
 	}
-	return isSymbol
+	return false
 }
 
 func (s *Scanner) IsAtEnd() bool {

@@ -50,6 +50,23 @@ func (g *Grammar) Generate(expr Expr) ([]rune, error) {
 		return str, nil
 	case StringExpr:
 		return expr.Text, nil
+	case RepetitionExpr:
+		var result []rune
+		repetitionCount := rand.Intn(expr.Max-expr.Min+1) + expr.Min
+		choiceExpr, ok := expr.expr.(ChoiceExpr)
+		if !ok {
+			return nil, fmt.Errorf("expected choice expression")
+		}
+
+		for i := 0; i < repetitionCount; i++ {
+			r, err := g.Generate(choiceExpr)
+			if err != nil {
+				return nil, fmt.Errorf("unknown expression")
+			}
+			result = append(result, r...)
+		}
+
+		return result, nil
 	default:
 		return nil, fmt.Errorf("unknown Expression")
 	}
