@@ -1,11 +1,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 )
+
+const defaultMaxRepetitions = 10
 
 type Parser struct {
 	pos    int
@@ -38,10 +39,9 @@ type DigitExpr struct {
 }
 
 type RepetitionExpr struct {
-	Min        int
-	Max        int
-	DefaultMax bool
-	Expr       Expr
+	Min  int
+	Max  int
+	Expr Expr
 }
 
 func NewParser(tokens []Token, line []rune) Parser {
@@ -82,7 +82,7 @@ func (p *Parser) ParseChoiceExpr() (Expr, error) {
 	var expr ChoiceExpr
 	expr = append(expr, sequenceExpr)
 
-	for !p.IsAtEnd() && p.Peek().TokenType == Choice {
+	for !p.IsAtEnd() && p.Peek().OfType(Choice) {
 		if err := p.Expect(Choice); err != nil {
 			return nil, err
 		}
@@ -119,35 +119,42 @@ func (p *Parser) ParsePrimaryExpr() (Expr, error) {
 			return nil, err
 		}
 
-		asterisk := p.Peek()
-
-		if asterisk.TokenType == Asterisk {
+		asterisk := p.Next()
+		if asterisk.OfType(Asterisk) {
+			max := defaultMaxRepetitions
+			IsDefaultMax := true
+			digit := p.Peek()
+			if digit.OfType(Digit) {
+				max, err = strconv.Atoi(string(digit.Text))
+				if err != nil {
+					return nil, err
+				}
+				IsDefaultMax = false
+				p.Next()
+			}
 			expr, err := p.ParsePrimaryExpr()
 			if err != nil {
 				return nil, err
 			}
-			repetitionExpr, ok := expr.(RepetitionExpr)
-			if !ok {
-				return nil, errors.New("expected repetition expression")
+			if IsDefaultMax {
+				max = min + max
 			}
 
-			repetitionExpr.Min = min
-			if repetitionExpr.DefaultMax {
-				repetitionExpr.Max = min + repetitionExpr.Max
+			if max < min {
+				return nil, fmt.Errorf("repetition expression error: max repeat count (%d) must be greater than min repeat count (%d):%s", max, min, p.PointToLoc(token))
 			}
-
-			if repetitionExpr.Max < min {
-				return nil, fmt.Errorf("repetition expression error: max repeat count (%d) must be greater than min repeat count (%d):%s", repetitionExpr.Max, min, p.PointToLoc(token))
-			}
-
-			return repetitionExpr, nil
+			return RepetitionExpr{
+				Min:  min,
+				Max:  max,
+				Expr: expr,
+			}, nil
 		}
 
 		return DigitExpr(token), nil
 	case Asterisk:
 		p.Next()
 		digit := p.Peek()
-		if digit.TokenType == Digit {
+		if digit.OfType(Digit) {
 			p.Next()
 			expr, err := p.ParsePrimaryExpr()
 			if err != nil {
@@ -167,9 +174,8 @@ func (p *Parser) ParsePrimaryExpr() (Expr, error) {
 			return nil, err
 		}
 		return RepetitionExpr{
-			Expr:       expr,
-			DefaultMax: true,
-			Max:        10,
+			Expr: expr,
+			Max:  defaultMaxRepetitions,
 		}, nil
 	case OpenCurlyBrace:
 		p.Next()
@@ -179,7 +185,7 @@ func (p *Parser) ParsePrimaryExpr() (Expr, error) {
 			return nil, err
 		}
 		return RepetitionExpr{
-			Max:  10,
+			Max:  defaultMaxRepetitions,
 			Expr: expr,
 		}, nil
 	default:
@@ -217,7 +223,7 @@ func (p *Parser) Next() Token {
 
 func (p *Parser) Expect(expected TokenType) error {
 	token := p.Peek()
-	if token.TokenType == expected {
+	if token.OfType(expected) {
 		p.Next()
 		return nil
 	}

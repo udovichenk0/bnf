@@ -208,3 +208,7 @@ func (s *Scanner) PointToLoc() string {
 	count := int((s.current-s.start)/2) + s.start
 	return fmt.Sprintf("\n%s\n%s^\n", string(s.line), strings.Repeat("-", count))
 }
+
+func (t Token) OfType(tokType TokenType) bool {
+	return t.TokenType == tokType
+}
