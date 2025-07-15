@@ -50,6 +50,8 @@ func (g *Grammar) Generate(expr Expr) ([]rune, error) {
 		return str, nil
 	case StringExpr:
 		return expr.Text, nil
+	case DigitExpr:
+		return expr.Text, nil
 	case RepetitionExpr:
 		var result []rune
 		repetitionCount := rand.Intn(expr.Max-expr.Min+1) + expr.Min

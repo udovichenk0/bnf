@@ -1,6 +1,6 @@
 <address> := <street-address> ", " <city> ", " <postal-code> ", " <country>
 
-<street-address> = <number> " " <street-name> " " <street-type>
+<street-address> = <number> " " 15*<street-name> " " <street-type>
 
 <street-name> ::= "Main" ("Oak" / "Maple") | "Elm" "Sunset"
 

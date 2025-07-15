@@ -24,6 +24,7 @@ type TokenType int
 const (
 	NonTerminalSym TokenType = iota + 1
 	String
+	Digit
 	Equal
 	Choice
 	OpenParen
@@ -80,12 +81,16 @@ func (s Scanner) Scan() ([]Token, error) {
 			s.Next()
 			continue
 		}
+		if s.IsDigit(c) {
+			s.GetDigitToken()
+			continue
+		}
 		if s.IsSymbol(c) {
 			s.GetLiteralToken()
 			continue
 		} else {
-			l := fmt.Sprintf("unknown symbol: %s in line:", string(c))
-			return nil, fmt.Errorf("%s \n%s\n%s^", l, string(s.line), strings.Repeat("-", s.current))
+			s.start = s.current
+			return nil, fmt.Errorf("unknown symbol: %s in line:%s", string(c), s.PointToLoc())
 		}
 	}
 	return s.tokens, nil
@@ -140,12 +145,26 @@ func (s *Scanner) GetLiteralToken() {
 
 	e, ok := LiteralTokens[string(lit)]
 	if !ok {
-		log.Fatalf("unknown literal token '%s' in line: \n%s\n%s^", string(lit), string(s.line), strings.Repeat("-", s.start))
+		log.Fatalf("unknown literal token '%s' in line:%s", string(lit), s.PointToLoc())
 		return
 	}
 	s.tokens = append(s.tokens, Token{
 		Text:      lit,
 		TokenType: e,
+		Loc:       s.start,
+	})
+}
+
+func (s *Scanner) GetDigitToken() {
+	s.start = s.current
+	var lit []rune
+	for !s.IsAtEnd() && s.IsDigit(s.Peek()) {
+		lit = append(lit, s.Next())
+	}
+
+	s.tokens = append(s.tokens, Token{
+		Text:      lit,
+		TokenType: Digit,
 		Loc:       s.start,
 	})
 }
@@ -165,6 +184,10 @@ func (s *Scanner) IsSymbol(b rune) bool {
 	return false
 }
 
+func (s *Scanner) IsDigit(c rune) bool {
+	return c >= '0' && c <= '9'
+}
+
 func (s *Scanner) IsAtEnd() bool {
 	return s.current >= len(s.line) || s.line[s.current] == '\r' || s.line[s.current] == '\n'
 }
@@ -179,4 +202,9 @@ func (s *Scanner) Next() rune {
 	}
 	s.current++
 	return s.line[s.current-1]
+}
+
+func (s *Scanner) PointToLoc() string {
+	count := int((s.current-s.start)/2) + s.start
+	return fmt.Sprintf("\n%s\n%s^\n", string(s.line), strings.Repeat("-", count))
 }
