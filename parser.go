@@ -31,7 +31,7 @@ type StringExpr struct {
 type RepetitionExpr struct {
 	Min  int
 	Max  int
-	expr Expr
+	Expr Expr
 }
 
 func NewParser(tokens []Token, line []rune) Parser {
@@ -102,6 +102,17 @@ func (p *Parser) ParsePrimaryExpr() (Expr, error) {
 			return nil, err
 		}
 		return expr, nil
+	case Asterisk:
+		p.Next()
+		expr, err := p.ParsePrimaryExpr()
+		if err != nil {
+			return nil, err
+		}
+		return RepetitionExpr{
+			Expr: expr,
+			Min:  0,
+			Max:  10,
+		}, nil
 	case OpenCurlyBrace:
 		p.Next()
 		expr, _ := p.Parse()
@@ -112,7 +123,7 @@ func (p *Parser) ParsePrimaryExpr() (Expr, error) {
 		return RepetitionExpr{
 			Min:  0,
 			Max:  10,
-			expr: expr,
+			Expr: expr,
 		}, nil
 	default:
 		return nil, fmt.Errorf("expect expression")
@@ -121,7 +132,7 @@ func (p *Parser) ParsePrimaryExpr() (Expr, error) {
 
 func (p *Parser) CanStartExpr() bool {
 	switch p.Peek().TokenType {
-	case String, OpenParen, NonTerminalSym, OpenCurlyBrace:
+	case String, OpenParen, NonTerminalSym, OpenCurlyBrace, Asterisk:
 		return true
 	default:
 		return false
