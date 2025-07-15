@@ -13,13 +13,6 @@ type Scanner struct {
 	tokens  []Token
 }
 
-const (
-	choiceSym  = "|"
-	equalSym   = "::="
-	openParen  = "("
-	closeParen = ")"
-)
-
 type Token struct {
 	Text      []rune
 	TokenType TokenType
@@ -42,23 +35,22 @@ func NewScanner(line []rune) Scanner {
 }
 
 var LiteralTokens = map[string]TokenType{
-	choiceSym:  Choice,
-	equalSym:   Equal,
-	openParen:  OpenParen,
-	closeParen: CloseParen,
+	"|":   Choice,
+	"/":   Choice,
+	"::=": Equal,
+	":=":  Equal,
+	"=":   Equal,
+	"(":   OpenParen,
+	")":   CloseParen,
 }
 
 func TokenToString(tokenType TokenType) (string, error) {
-	switch tokenType {
-	case Choice:
-		return choiceSym, nil
-	case Equal:
-		return equalSym, nil
-	case CloseParen:
-		return closeParen, nil
-	default:
-		return "", fmt.Errorf("unknown tokenType: %d", tokenType)
+	for lit, tt := range LiteralTokens {
+		if tokenType == tt {
+			return lit, nil
+		}
 	}
+	return "", fmt.Errorf("unknown tokenType: %d", tokenType)
 }
 
 func (s Scanner) Scan() ([]Token, error) {
@@ -162,7 +154,7 @@ func (s *Scanner) Peek() rune {
 func (s *Scanner) IsSymbol(b rune) bool {
 	var isSymbol bool
 	switch b {
-	case '|', ':', '=', '(', ')':
+	case '|', '/', ':', '=', '(', ')':
 		isSymbol = true
 	}
 	return isSymbol

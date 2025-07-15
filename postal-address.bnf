@@ -1,8 +1,8 @@
-<address> ::= <street-address> ", " <city> ", " <postal-code> ", " <country>
+<address> := <street-address> ", " <city> ", " <postal-code> ", " <country>
 
-<street-address> ::= <number> " " <street-name> " " <street-type>
+<street-address> = <number> " " <street-name> " " <street-type>
 
-<street-name> ::= "Main" ("Oak" | "Maple") | "Elm" "Sunset"
+<street-name> ::= "Main" ("Oak" / "Maple") | "Elm" "Sunset"
 
 <street-type> ::= "St." | "Ave." | "Blvd." | "Rd." | "Ln."
 
