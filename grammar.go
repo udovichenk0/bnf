@@ -28,6 +28,11 @@ func (g *Grammar) Generate(expr Expr) ([]rune, error) {
 		chosenAlternative := rand.Intn(len(expr))
 		sequence := expr[chosenAlternative]
 		return g.Generate(sequence)
+	case OptionalExpr:
+		if rand.Intn(2) == 1 {
+			return g.Generate(expr.Expr)
+		}
+		return nil, nil
 	case SequenceExpr:
 		var sequenceString []rune
 		for i := 0; i < len(expr); i++ {

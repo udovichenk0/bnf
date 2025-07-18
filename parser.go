@@ -44,6 +44,10 @@ type RepetitionExpr struct {
 	Expr Expr
 }
 
+type OptionalExpr struct {
+	Expr Expr
+}
+
 func NewParser(tokens []Token, line []rune) Parser {
 	return Parser{tokens: tokens, line: line}
 }
@@ -177,10 +181,27 @@ func (p *Parser) ParsePrimaryExpr() (Expr, error) {
 			Expr: expr,
 			Max:  defaultMaxRepetitions,
 		}, nil
+	case OpenSquareBrace:
+		p.Next()
+		expr, err := p.Parse()
+		if err != nil {
+			return nil, err
+		}
+		err = p.Expect(CloseSquareBrace)
+		if err != nil {
+			return nil, err
+		}
+		return OptionalExpr{
+			Expr: expr,
+		}, nil
+
 	case OpenCurlyBrace:
 		p.Next()
-		expr, _ := p.Parse()
-		err := p.Expect(CloseCurlyBrace)
+		expr, err := p.Parse()
+		if err != nil {
+			return nil, err
+		}
+		err = p.Expect(CloseCurlyBrace)
 		if err != nil {
 			return nil, err
 		}
@@ -195,7 +216,7 @@ func (p *Parser) ParsePrimaryExpr() (Expr, error) {
 
 func (p *Parser) CanStartExpr() bool {
 	switch p.Peek().TokenType {
-	case String, OpenParen, NonTerminalSym, OpenCurlyBrace, Asterisk, Digit:
+	case String, OpenParen, NonTerminalSym, OpenCurlyBrace, Asterisk, Digit, OpenSquareBrace:
 		return true
 	default:
 		return false
