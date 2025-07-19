@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"unicode"
 )
 
 type Scanner struct {
@@ -85,6 +86,10 @@ func (s Scanner) Scan() ([]Token, error) {
 			s.Next()
 			continue
 		}
+		if unicode.IsLetter(c) {
+			s.GetVariableToken()
+			continue
+		}
 		if s.IsDigit(c) {
 			s.GetDigitToken()
 			continue
@@ -101,23 +106,42 @@ func (s Scanner) Scan() ([]Token, error) {
 }
 
 func (s *Scanner) GetVariableToken() {
-	s.current++
-	s.start = s.current
-	for !s.IsAtEnd() && !s.Match(('>')) {
-		s.Next()
-	}
-	if s.IsAtEnd() {
-		log.Fatalf("Error: Expected '%c' symbol at the end of the line: '%s'", '>', string(s.line))
+	if s.Peek() == '<' {
+		s.current++
+		s.start = s.current
+		for !s.IsAtEnd() && !s.Match(('>')) {
+			s.Next()
+		}
+		if s.IsAtEnd() {
+			log.Fatalf("Error: Expected '%c' symbol at the end of the line: '%s'", '>', string(s.line))
+			return
+		}
+
+		token := Token{
+			Text:      s.line[s.start:s.current],
+			TokenType: NonTerminalSym,
+			Loc:       s.start,
+		}
+		s.current++
+		s.tokens = append(s.tokens, token)
 		return
 	}
+	if unicode.IsLetter(s.Peek()) {
+		s.start = s.current
+		v := []rune{s.Peek()}
+		s.current++
+		for unicode.IsLetter(s.Peek()) {
+			v = append(v, s.Peek())
+			s.Next()
+		}
+		s.tokens = append(s.tokens, Token{
+			Text:      s.line[s.start:s.current],
+			TokenType: NonTerminalSym,
+			Loc:       s.start,
+		})
 
-	token := Token{
-		Text:      s.line[s.start:s.current],
-		TokenType: NonTerminalSym,
-		Loc:       s.start,
+		s.current++
 	}
-	s.current++
-	s.tokens = append(s.tokens, token)
 }
 
 func (s *Scanner) GetStringToken() {

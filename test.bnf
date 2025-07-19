@@ -1,4 +1,4 @@
-<person> := <name> [ (<surname> | <age>) ] ["."]
+person := <name> [ (<surname> | <age>) ] ["."]
 <name> ::= "denis"
 <surname> ::= "surname"
 <age> ::= "20"
