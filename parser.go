@@ -154,7 +154,7 @@ func (p *Parser) ParsePrimaryExpr() (Expr, error) {
 			}, nil
 		}
 
-		return DigitExpr(token), nil
+		return nil, nil
 	case Asterisk:
 		p.Next()
 		digit := p.Peek()
@@ -194,7 +194,6 @@ func (p *Parser) ParsePrimaryExpr() (Expr, error) {
 		return OptionalExpr{
 			Expr: expr,
 		}, nil
-
 	case OpenCurlyBrace:
 		p.Next()
 		expr, err := p.Parse()

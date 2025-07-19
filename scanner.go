@@ -143,18 +143,24 @@ func (s *Scanner) GetStringToken() {
 func (s *Scanner) GetLiteralToken() {
 	s.start = s.current
 	var lit []rune
+	var tokenType TokenType
+	var ok bool
+
 	for !s.IsAtEnd() && s.IsSymbol(s.Peek()) {
 		lit = append(lit, s.Next())
+		tokenType, ok = LiteralTokens[string(lit)]
+		if ok {
+			break
+		}
 	}
 
-	e, ok := LiteralTokens[string(lit)]
 	if !ok {
 		log.Fatalf("unknown literal token '%s' in line:%s", string(lit), s.PointToLoc())
 		return
 	}
 	s.tokens = append(s.tokens, Token{
 		Text:      lit,
-		TokenType: e,
+		TokenType: tokenType,
 		Loc:       s.start,
 	})
 }
